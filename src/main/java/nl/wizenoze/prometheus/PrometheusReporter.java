@@ -11,9 +11,9 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
-import com.codahale.metrics.graphite.GraphiteSender;
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.exporter.PushGateway;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
@@ -23,12 +23,15 @@ import org.slf4j.LoggerFactory;
 /**
  * A reporter which publishes metric values to a Prometheus Gateway.
  *
- * This implementation is based upon {@code com.codahale.metrics.graphite.GraphiteReporter}.
+ * This implementation is based upon {@code com.codahale.metrics.pushGateway.GraphiteReporter}.
  *
- * @see <a href="https://github.com/prometheus/pushgateway">Push acceptor for ephemeral and batch jobs</a>
- * @see <a href="https://metrics.dropwizard.io/3.1.0/apidocs/com/codahale/metrics/graphite/GraphiteReporter.html">com.codahale.metrics.graphite.GraphiteReporter</a>
+ * @see <a href="https://github.com/prometheus/pushgateway">Push acceptor for ephemeral and batch
+ * jobs</a>
+ * @see <a href="https://metrics.dropwizard.io/3.1.0/apidocs/com/codahale/metrics/graphite/GraphiteReporter.html">com.codahale.metrics.pushGateway.GraphiteReporter</a>
  */
 public class PrometheusReporter extends ScheduledReporter {
+
+    private static final String JOB_NAME = "storm";
 
     /**
      * Returns a new {@link PrometheusReporter.Builder} for {@link PrometheusReporter}.
@@ -120,14 +123,14 @@ public class PrometheusReporter extends ScheduledReporter {
 
         /**
          * Builds a {@link PrometheusReporter} with the given properties, sending metrics using the
-         * given {@link GraphiteSender}.
+         * given {@link PushGateway}.
          *
-         * @param graphite a {@link GraphiteSender}
+         * @param pushGateway a {@link PushGateway}
          * @return a {@link PrometheusReporter}
          */
-        public PrometheusReporter build(GraphiteSender graphite) {
+        public PrometheusReporter build(PushGateway pushGateway) {
             return new PrometheusReporter(registry,
-                    graphite,
+                    pushGateway,
                     clock,
                     prefix,
                     rateUnit,
@@ -138,19 +141,19 @@ public class PrometheusReporter extends ScheduledReporter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PrometheusReporter.class);
 
-    private final GraphiteSender graphite;
+    private final PushGateway pushGateway;
     private final Clock clock;
     private final String prefix;
 
     private PrometheusReporter(MetricRegistry registry,
-            GraphiteSender graphite,
+            PushGateway pushGateway,
             Clock clock,
             String prefix,
             TimeUnit rateUnit,
             TimeUnit durationUnit,
             MetricFilter filter) {
         super(registry, "prometheus-reporter", filter, rateUnit, durationUnit);
-        this.graphite = graphite;
+        this.pushGateway = pushGateway;
         this.clock = clock;
         this.prefix = prefix;
     }
@@ -161,161 +164,101 @@ public class PrometheusReporter extends ScheduledReporter {
             SortedMap<String, Histogram> histograms,
             SortedMap<String, Meter> meters,
             SortedMap<String, Timer> timers) {
-        final long timestamp = clock.getTime() / 1000;
 
-        // oh it'd be lovely to use Java 7 here
+        CollectorRegistry registry = new CollectorRegistry();
+
+        for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
+            registerGauge(registry, entry.getKey(), entry.getValue());
+        }
+
+        for (Map.Entry<String, Counter> entry : counters.entrySet()) {
+            registerCounter(registry, entry.getKey(), entry.getValue());
+        }
+
+        for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
+            registerHistogram(registry, entry.getKey(), entry.getValue());
+        }
+
+        for (Map.Entry<String, Meter> entry : meters.entrySet()) {
+            registerMetered(registry, entry.getKey(), entry.getValue());
+        }
+
+        for (Map.Entry<String, Timer> entry : timers.entrySet()) {
+            registerTimer(registry, entry.getKey(), entry.getValue());
+        }
+
         try {
-            if (!graphite.isConnected()) {
-                graphite.connect();
-            }
-
-            for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
-                reportGauge(entry.getKey(), entry.getValue(), timestamp);
-            }
-
-            for (Map.Entry<String, Counter> entry : counters.entrySet()) {
-                reportCounter(entry.getKey(), entry.getValue(), timestamp);
-            }
-
-            for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
-                reportHistogram(entry.getKey(), entry.getValue(), timestamp);
-            }
-
-            for (Map.Entry<String, Meter> entry : meters.entrySet()) {
-                reportMetered(entry.getKey(), entry.getValue(), timestamp);
-            }
-
-            for (Map.Entry<String, Timer> entry : timers.entrySet()) {
-                reportTimer(entry.getKey(), entry.getValue(), timestamp);
-            }
-
-            graphite.flush();
+            pushGateway.pushAdd(registry, JOB_NAME);
         } catch (IOException e) {
-            LOGGER.warn("Unable to report to Graphite", graphite, e);
-            try {
-                graphite.close();
-            } catch (IOException e1) {
-                LOGGER.warn("Error closing Graphite", graphite, e);
-            }
+            LOGGER.warn("Unable to report to Prometheus", pushGateway, e);
         }
     }
 
-    @Override
-    public void stop() {
-        try {
-            super.stop();
-        } finally {
-            try {
-                graphite.close();
-            } catch (IOException e) {
-                LOGGER.debug("Error disconnecting from Graphite", graphite, e);
-            }
-        }
-    }
-
-    private void reportTimer(String name, Timer timer, long timestamp) throws IOException {
+    private void registerTimer(CollectorRegistry registry, String name, Timer timer) {
         final Snapshot snapshot = timer.getSnapshot();
 
-        graphite.send(prefix(name, "max"), format(convertDuration(snapshot.getMax())), timestamp);
-        graphite.send(prefix(name, "mean"), format(convertDuration(snapshot.getMean())), timestamp);
-        graphite.send(prefix(name, "min"), format(convertDuration(snapshot.getMin())), timestamp);
-        graphite.send(prefix(name, "stddev"),
-                format(convertDuration(snapshot.getStdDev())),
-                timestamp);
-        graphite.send(prefix(name, "p50"),
-                format(convertDuration(snapshot.getMedian())),
-                timestamp);
-        graphite.send(prefix(name, "p75"),
-                format(convertDuration(snapshot.get75thPercentile())),
-                timestamp);
-        graphite.send(prefix(name, "p95"),
-                format(convertDuration(snapshot.get95thPercentile())),
-                timestamp);
-        graphite.send(prefix(name, "p98"),
-                format(convertDuration(snapshot.get98thPercentile())),
-                timestamp);
-        graphite.send(prefix(name, "p99"),
-                format(convertDuration(snapshot.get99thPercentile())),
-                timestamp);
-        graphite.send(prefix(name, "p999"),
-                format(convertDuration(snapshot.get999thPercentile())),
-                timestamp);
+        addGauge(registry, prefix(name, "max"), convertDuration(snapshot.getMax()));
+        addGauge(registry, prefix(name, "mean"), convertDuration(snapshot.getMean()));
+        addGauge(registry, prefix(name, "min"), convertDuration(snapshot.getMin()));
+        addGauge(registry, prefix(name, "stddev"), convertDuration(snapshot.getStdDev()));
+        addGauge(registry, prefix(name, "p50"), convertDuration(snapshot.getMedian()));
+        addGauge(registry, prefix(name, "p75"), convertDuration(snapshot.get75thPercentile()));
+        addGauge(registry, prefix(name, "p95"), convertDuration(snapshot.get95thPercentile()));
+        addGauge(registry, prefix(name, "p98"), convertDuration(snapshot.get98thPercentile()));
+        addGauge(registry, prefix(name, "p99"), convertDuration(snapshot.get99thPercentile()));
+        addGauge(registry, prefix(name, "p999"), convertDuration(snapshot.get999thPercentile()));
 
-        reportMetered(name, timer, timestamp);
+        registerMetered(registry, name, timer);
     }
 
-    private void reportMetered(String name, Metered meter, long timestamp) throws IOException {
-        graphite.send(prefix(name, "count"), format(meter.getCount()), timestamp);
-        graphite.send(prefix(name, "m1_rate"),
-                format(convertRate(meter.getOneMinuteRate())),
-                timestamp);
-        graphite.send(prefix(name, "m5_rate"),
-                format(convertRate(meter.getFiveMinuteRate())),
-                timestamp);
-        graphite.send(prefix(name, "m15_rate"),
-                format(convertRate(meter.getFifteenMinuteRate())),
-                timestamp);
-        graphite.send(prefix(name, "mean_rate"),
-                format(convertRate(meter.getMeanRate())),
-                timestamp);
+    private void registerMetered(CollectorRegistry registry, String name, Metered meter) {
+        addGauge(registry, prefix(name, "count"), meter.getCount());
+        addGauge(registry, prefix(name, "m1_rate"), convertRate(meter.getOneMinuteRate()));
+        addGauge(registry, prefix(name, "m5_rate"), convertRate(meter.getFiveMinuteRate()));
+        addGauge(registry, prefix(name, "m15_rate"), convertRate(meter.getFifteenMinuteRate()));
+        addGauge(registry, prefix(name, "mean_rate"), convertRate(meter.getMeanRate()));
     }
 
-    private void reportHistogram(String name, Histogram histogram, long timestamp)
-            throws IOException {
+    private void registerHistogram(CollectorRegistry registry, String name, Histogram histogram) {
         final Snapshot snapshot = histogram.getSnapshot();
-        graphite.send(prefix(name, "count"), format(histogram.getCount()), timestamp);
-        graphite.send(prefix(name, "max"), format(snapshot.getMax()), timestamp);
-        graphite.send(prefix(name, "mean"), format(snapshot.getMean()), timestamp);
-        graphite.send(prefix(name, "min"), format(snapshot.getMin()), timestamp);
-        graphite.send(prefix(name, "stddev"), format(snapshot.getStdDev()), timestamp);
-        graphite.send(prefix(name, "p50"), format(snapshot.getMedian()), timestamp);
-        graphite.send(prefix(name, "p75"), format(snapshot.get75thPercentile()), timestamp);
-        graphite.send(prefix(name, "p95"), format(snapshot.get95thPercentile()), timestamp);
-        graphite.send(prefix(name, "p98"), format(snapshot.get98thPercentile()), timestamp);
-        graphite.send(prefix(name, "p99"), format(snapshot.get99thPercentile()), timestamp);
-        graphite.send(prefix(name, "p999"), format(snapshot.get999thPercentile()), timestamp);
+
+        addGauge(registry, prefix(name, "count"), histogram.getCount());
+        addGauge(registry, prefix(name, "max"), snapshot.getMax());
+        addGauge(registry, prefix(name, "mean"), snapshot.getMean());
+        addGauge(registry, prefix(name, "min"), snapshot.getMin());
+        addGauge(registry, prefix(name, "stddev"), snapshot.getStdDev());
+        addGauge(registry, prefix(name, "p50"), snapshot.getMedian());
+        addGauge(registry, prefix(name, "p75"), snapshot.get75thPercentile());
+        addGauge(registry, prefix(name, "p95"), snapshot.get95thPercentile());
+        addGauge(registry, prefix(name, "p98"), snapshot.get98thPercentile());
+        addGauge(registry, prefix(name, "p99"), snapshot.get99thPercentile());
+        addGauge(registry, prefix(name, "p999"), snapshot.get999thPercentile());
     }
 
-    private void reportCounter(String name, Counter counter, long timestamp) throws IOException {
-        graphite.send(prefix(name, "count"), format(counter.getCount()), timestamp);
+    private void registerCounter(CollectorRegistry registry, String name, Counter counter) {
+        addGauge(registry, prefix(name, "count"), counter.getCount());
     }
 
-    private void reportGauge(String name, Gauge gauge, long timestamp) throws IOException {
-        final String value = format(gauge.getValue());
-        if (value != null) {
-            graphite.send(prefix(name), value, timestamp);
-        }
+    private void registerGauge(CollectorRegistry registry, String name, Gauge gauge) {
+        addGauge(registry, prefix(name), gauge.getValue());
     }
 
-    private String format(Object o) {
-        if (o instanceof Float) {
-            return format(((Float) o).doubleValue());
-        } else if (o instanceof Double) {
-            return format(((Double) o).doubleValue());
-        } else if (o instanceof Byte) {
-            return format(((Byte) o).longValue());
-        } else if (o instanceof Short) {
-            return format(((Short) o).longValue());
-        } else if (o instanceof Integer) {
-            return format(((Integer) o).longValue());
-        } else if (o instanceof Long) {
-            return format(((Long) o).longValue());
-        }
-        return null;
+    private void addGauge(CollectorRegistry registry, String name, Number value) {
+        assert (value != null);
+
+        io.prometheus.client.Gauge gauge = io.prometheus.client.Gauge.build()
+                .name(name).register(registry);
+
+        gauge.set(value.doubleValue());
+    }
+
+    private void addGauge(CollectorRegistry registry, String name, Object value) {
+        assert (value instanceof Number);
+        addGauge(registry, name, (Number) value);
     }
 
     private String prefix(String... components) {
         return MetricRegistry.name(prefix, components);
-    }
-
-    private String format(long n) {
-        return Long.toString(n);
-    }
-
-    private String format(double v) {
-        // the Carbon plaintext format is pretty underspecified, but it seems like it just wants
-        // US-formatted digits
-        return String.format(Locale.US, "%2.2f", v);
     }
 
 }

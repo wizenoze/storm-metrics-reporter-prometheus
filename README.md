@@ -33,6 +33,7 @@ storm.metrics.reporters:
         - "worker"
     report.period: 60
     report.period.units: "SECONDS"
+    prometheus.scheme: "http"
     prometheus.host: "localhost"
     prometheus.port: 9091
 ```

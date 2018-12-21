@@ -35,8 +35,8 @@
     <properties>
         <junit.jupiter.version>5.1.0</junit.jupiter.version>
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
-        <maven-compiler-plugin.source.version>1.6</maven-compiler-plugin.source.version>
-        <maven-compiler-plugin.target.version>1.6</maven-compiler-plugin.target.version>
+        <maven-compiler-plugin.source.version>1.7</maven-compiler-plugin.source.version>
+        <maven-compiler-plugin.target.version>1.7</maven-compiler-plugin.target.version>
         <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
         <maven-release-plugin.version>2.5.3</maven-release-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -112,6 +112,13 @@
             <version>1.2.2</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient_pushgateway</artifactId>
+            <version>0.6.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

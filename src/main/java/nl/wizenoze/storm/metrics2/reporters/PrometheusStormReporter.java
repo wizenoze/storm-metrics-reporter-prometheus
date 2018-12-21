@@ -1,9 +1,9 @@
 package nl.wizenoze.storm.metrics2.reporters;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.graphite.Graphite;
-import com.codahale.metrics.graphite.GraphiteSender;
-import com.codahale.metrics.graphite.GraphiteUDP;
+import io.prometheus.client.exporter.PushGateway;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import nl.wizenoze.prometheus.PrometheusReporter;
@@ -21,7 +21,7 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
     public static final String PROMETHEUS_PREFIXED_WITH = "prometheus.prefixed.with";
     public static final String PROMETHEUS_HOST = "prometheus.host";
     public static final String PROMETHEUS_PORT = "prometheus.port";
-    public static final String PROMETHEUS_TRANSPORT = "prometheus.transport";
+    public static final String PROMETHEUS_SCHEME = "prometheus.scheme";
 
     @Override
     public void prepare(MetricRegistry metricsRegistry, Map stormConf, Map reporterConf) {
@@ -58,14 +58,19 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
 
         String host = getMetricsTargetHost(reporterConf);
         Integer port = getMetricsTargetPort(reporterConf);
-        String transport = getMetricsTargetTransport(reporterConf);
-        GraphiteSender sender = null;
-        if (transport.equalsIgnoreCase("udp")) {
-            sender = new GraphiteUDP(host, port);
-        } else {
-            sender = new Graphite(host, port);
+        String scheme = getMetricsTargetScheme(reporterConf);
+
+        String httpAddress = scheme + "://" + host + ":" + port;
+
+        PushGateway pushGateway = null;
+
+        try {
+            pushGateway = new PushGateway(new URL(httpAddress));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
-        reporter = builder.build(sender);
+
+        reporter = builder.build(pushGateway);
     }
 
     private static String getMetricsPrefixedWith(Map reporterConf) {
@@ -73,15 +78,15 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
     }
 
     private static String getMetricsTargetHost(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_HOST), null);
+        return Utils.getString(reporterConf.get(PROMETHEUS_HOST), "localhost");
     }
 
     private static Integer getMetricsTargetPort(Map reporterConf) {
-        return Utils.getInt(reporterConf.get(PROMETHEUS_PORT), null);
+        return Utils.getInt(reporterConf.get(PROMETHEUS_PORT), 9091);
     }
 
-    private static String getMetricsTargetTransport(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_TRANSPORT), "tcp");
+    private static String getMetricsTargetScheme(Map reporterConf) {
+        return Utils.getString(reporterConf.get(PROMETHEUS_SCHEME), "http");
     }
 
 }
