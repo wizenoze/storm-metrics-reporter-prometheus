@@ -1,12 +1,11 @@
 package nl.wizenoze.storm.metrics2.reporters;
 
 import com.codahale.metrics.MetricRegistry;
-import io.prometheus.client.exporter.PushGateway;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import nl.wizenoze.prometheus.PrometheusReporter;
+import nl.wizenoze.prometheus.PushGatewayWrapper;
+import nl.wizenoze.prometheus.PushGatewayWrapperImpl;
 import org.apache.storm.daemon.metrics.MetricsUtils;
 import org.apache.storm.metrics2.filters.StormMetricsFilter;
 import org.apache.storm.metrics2.reporters.ScheduledStormReporter;
@@ -62,15 +61,8 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
 
         String httpAddress = scheme + "://" + host + ":" + port;
 
-        PushGateway pushGateway = null;
-
-        try {
-            pushGateway = new PushGateway(new URL(httpAddress));
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-
-        reporter = builder.build(pushGateway);
+        PushGatewayWrapper pushGatewayWrapper = new PushGatewayWrapperImpl(httpAddress);
+        reporter = builder.build(pushGatewayWrapper);
     }
 
     private static String getMetricsPrefixedWith(Map reporterConf) {

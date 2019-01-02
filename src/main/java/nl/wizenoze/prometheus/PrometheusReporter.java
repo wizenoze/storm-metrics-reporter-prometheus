@@ -12,7 +12,6 @@ import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 import io.prometheus.client.CollectorRegistry;
-import io.prometheus.client.exporter.PushGateway;
 import java.io.IOException;
 import java.util.Map;
 import java.util.SortedMap;
@@ -23,11 +22,11 @@ import org.slf4j.LoggerFactory;
 /**
  * A reporter which publishes metric values to a Prometheus Gateway.
  *
- * This implementation is based upon {@code com.codahale.metrics.pushGateway.GraphiteReporter}.
+ * This implementation is based upon {@code com.codahale.metrics.graphite.GraphiteReporter}.
  *
  * @see <a href="https://github.com/prometheus/pushgateway">Push acceptor for ephemeral and batch
  * jobs</a>
- * @see <a href="https://metrics.dropwizard.io/3.1.0/apidocs/com/codahale/metrics/graphite/GraphiteReporter.html">com.codahale.metrics.pushGateway.GraphiteReporter</a>
+ * @see <a href="https://metrics.dropwizard.io/3.1.0/apidocs/com/codahale/metrics/graphite/GraphiteReporter.html">com.codahale.metrics.graphite.GraphiteReporter</a>
  */
 public class PrometheusReporter extends ScheduledReporter {
 
@@ -123,14 +122,14 @@ public class PrometheusReporter extends ScheduledReporter {
 
         /**
          * Builds a {@link PrometheusReporter} with the given properties, sending metrics using the
-         * given {@link PushGateway}.
+         * given {@link PushGatewayWrapper}.
          *
-         * @param pushGateway a {@link PushGateway}
+         * @param pushGatewayWrapper a {@link PushGatewayWrapper}
          * @return a {@link PrometheusReporter}
          */
-        public PrometheusReporter build(PushGateway pushGateway) {
+        public PrometheusReporter build(PushGatewayWrapper pushGatewayWrapper) {
             return new PrometheusReporter(registry,
-                    pushGateway,
+                    pushGatewayWrapper,
                     clock,
                     prefix,
                     rateUnit,
@@ -141,19 +140,19 @@ public class PrometheusReporter extends ScheduledReporter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PrometheusReporter.class);
 
-    private final PushGateway pushGateway;
+    private final PushGatewayWrapper pushGatewayWrapper;
     private final Clock clock;
     private final String prefix;
 
     private PrometheusReporter(MetricRegistry registry,
-            PushGateway pushGateway,
+            PushGatewayWrapper pushGatewayWrapper,
             Clock clock,
             String prefix,
             TimeUnit rateUnit,
             TimeUnit durationUnit,
             MetricFilter filter) {
         super(registry, "prometheus-reporter", filter, rateUnit, durationUnit);
-        this.pushGateway = pushGateway;
+        this.pushGatewayWrapper = pushGatewayWrapper;
         this.clock = clock;
         this.prefix = prefix;
     }
@@ -188,9 +187,9 @@ public class PrometheusReporter extends ScheduledReporter {
         }
 
         try {
-            pushGateway.pushAdd(registry, JOB_NAME);
+            pushGatewayWrapper.pushAdd(registry, JOB_NAME);
         } catch (IOException e) {
-            LOGGER.warn("Unable to report to Prometheus", pushGateway, e);
+            LOGGER.warn("Unable to report to Prometheus", pushGatewayWrapper, e);
         }
     }
 
