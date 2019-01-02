@@ -1,11 +1,11 @@
-package nl.wizenoze.storm.metrics2.reporters;
+package com.wizenoze.storm.metrics2.reporters;
 
 import com.codahale.metrics.MetricRegistry;
+import com.wizenoze.prometheus.PrometheusReporter;
+import com.wizenoze.prometheus.PushGatewayWrapper;
+import com.wizenoze.prometheus.PushGatewayWrapperImpl;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import nl.wizenoze.prometheus.PrometheusReporter;
-import nl.wizenoze.prometheus.PushGatewayWrapper;
-import nl.wizenoze.prometheus.PushGatewayWrapperImpl;
 import org.apache.storm.daemon.metrics.MetricsUtils;
 import org.apache.storm.metrics2.filters.StormMetricsFilter;
 import org.apache.storm.metrics2.reporters.ScheduledStormReporter;

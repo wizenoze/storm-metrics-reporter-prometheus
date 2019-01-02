@@ -1,4 +1,4 @@
-package nl.wizenoze.prometheus;
+package com.wizenoze.prometheus;
 
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.PushGateway;

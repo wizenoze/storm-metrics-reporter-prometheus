@@ -1,4 +1,4 @@
-package nl.wizenoze.prometheus;
+package com.wizenoze.prometheus;
 
 import com.codahale.metrics.Clock;
 import com.codahale.metrics.Counter;

@@ -26,7 +26,7 @@ Add enable Prometheus Metrics Reporter in `storm.yaml`.
 ```
 storm.metrics.reporters:
   # Graphite Reporter
-  - class: "nl.wizenoze.storm.metrics2.reporters.PrometheusStormReporter"
+  - class: "com.wizenoze.storm.metrics2.reporters.PrometheusStormReporter"
     daemons:
         - "supervisor"
         - "nimbus"
