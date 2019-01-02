@@ -246,7 +246,7 @@ public class PrometheusReporter extends ScheduledReporter {
         assert (value != null);
 
         io.prometheus.client.Gauge gauge = io.prometheus.client.Gauge.build()
-                .name(name).register(registry);
+                .name(name).help(name).register(registry);
 
         gauge.set(value.doubleValue());
     }
@@ -257,7 +257,26 @@ public class PrometheusReporter extends ScheduledReporter {
     }
 
     private String prefix(String... components) {
-        return MetricRegistry.name(prefix, components);
+        final StringBuilder builder = new StringBuilder();
+
+        append(builder, prefix);
+
+        if (components != null) {
+            for (String s : components) {
+                append(builder, s);
+            }
+        }
+
+        return builder.toString();
+    }
+
+    private static void append(StringBuilder builder, String part) {
+        if (part != null && !part.isEmpty()) {
+            if (builder.length() > 0) {
+                builder.append('_');
+            }
+            builder.append(part);
+        }
     }
 
 }

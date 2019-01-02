@@ -34,6 +34,7 @@
 
     <properties>
         <junit.jupiter.version>5.1.0</junit.jupiter.version>
+        <mockito-junit-jupiter.version>2.23.4</mockito-junit-jupiter.version>
         <maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
         <maven-compiler-plugin.source.version>1.7</maven-compiler-plugin.source.version>
         <maven-compiler-plugin.target.version>1.7</maven-compiler-plugin.target.version>
@@ -129,6 +130,13 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito-junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
