@@ -1,11 +1,14 @@
 package com.wizenoze.prometheus;
 
+import static com.wizenoze.test.MetricRegistryBuilder.COUNTER_NAME;
+import static com.wizenoze.test.MetricRegistryBuilder.GAUGE_NAME;
+import static com.wizenoze.test.MetricRegistryBuilder.HISTOGRAM_NAME;
+import static com.wizenoze.test.MetricRegistryBuilder.METER_NAME;
+import static com.wizenoze.test.MetricRegistryBuilder.TIMER_NAME;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 
-import com.codahale.metrics.Clock;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -13,10 +16,9 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
-import com.codahale.metrics.UniformReservoir;
+import com.wizenoze.test.MetricRegistryBuilder;
 import io.prometheus.client.CollectorRegistry;
 import java.io.IOException;
-import org.apache.storm.metrics2.SimpleGauge;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,26 +42,19 @@ class PrometheusReporterTest {
 
     @BeforeEach
     void setUp() {
-        MetricRegistry metricRegistry = new MetricRegistry();
+        MetricRegistry metricRegistry = new MetricRegistryBuilder()
+                .updateHistogram(1)
+                .incrementCount()
+                .markMeter()
+                .updateTimer(1)
+                .setGaugeValue(1)
+                .build();
 
-        histogram = new Histogram(new UniformReservoir());
-        histogram.update(1);
-        metricRegistry.register("histogram", histogram);
-
-        counter = new Counter();
-        counter.inc();
-        metricRegistry.register("counter", counter);
-
-        meter = new Meter(new FixedClock());
-        meter.mark();
-        metricRegistry.register("meter", meter);
-
-        timer = new Timer();
-        timer.update(1, SECONDS);
-        metricRegistry.register("timer", timer);
-
-        gauge = new SimpleGauge<>(1);
-        metricRegistry.register("gauge", gauge);
+        histogram = metricRegistry.histogram(HISTOGRAM_NAME);
+        counter = metricRegistry.counter(COUNTER_NAME);
+        meter = metricRegistry.meter(METER_NAME);
+        timer = metricRegistry.timer(TIMER_NAME);
+        gauge = (Gauge<Integer>) metricRegistry.getMetrics().get(GAUGE_NAME);
 
         prometheusReporter = PrometheusReporter.forRegistry(metricRegistry)
                 .prefixedWith("test").convertDurationsTo(NANOSECONDS).build(pushGatewayWrapper);
@@ -182,13 +177,5 @@ class PrometheusReporterTest {
                 collectorRegistry.getSampleValue("test_gauge").intValue(), "test_gauge");
     }
 
-    private static class FixedClock extends Clock {
-
-        @Override
-        public long getTick() {
-            return 1;
-        }
-
-    }
 
 }
