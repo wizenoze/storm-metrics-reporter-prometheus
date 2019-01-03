@@ -19,7 +19,7 @@ Having looked into `org.apache.storm.metrics2.reporters.GraphiteStormReporter`, 
 
 ## Installation
 
-Download `storm-metrics-reporter-prometheus-1.0.0.jar` from here and put into underneath `{STORM_DIR}/extlib` and/or `${STORM_DIR}/extlib-daemon` depending upon the metrics of which process(es) you want to send to Prometheus.
+Download `storm-metrics-reporter-prometheus-0.0.1-SNAPSHOT.jar` from here and put into underneath `{STORM_DIR}/extlib` and/or `${STORM_DIR}/extlib-daemon` depending upon the metrics of which process(es) you want to send to Prometheus.
 
 Add enable Prometheus Metrics Reporter in `storm.yaml`.
 
