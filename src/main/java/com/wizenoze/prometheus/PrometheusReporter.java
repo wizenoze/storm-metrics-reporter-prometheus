@@ -263,17 +263,20 @@ public class PrometheusReporter extends ScheduledReporter {
 
         if (components != null) {
             for (String s : components) {
+                // Prometheus doesn't allow dot and dash characters in metric names
+                s = s.replace(".", "__").replace("-", "_");
                 append(builder, s);
             }
         }
 
-        return builder.toString();
+        String name = builder.toString();
+        return name;
     }
 
     private static void append(StringBuilder builder, String part) {
         if (part != null && !part.isEmpty()) {
             if (builder.length() > 0) {
-                builder.append('_');
+                builder.append(':');
             }
             builder.append(part);
         }

@@ -1,0 +1,12 @@
+storm.metrics.reporters:
+  # Prometheus Reporter
+  - class: "com.wizenoze.storm.metrics2.reporters.PrometheusStormReporter"
+    daemons:
+      - "supervisor"
+      - "nimbus"
+      - "worker"
+    report.period: 1
+    report.period.units: "SECONDS"
+    prometheus.scheme: "http"
+    prometheus.host: "localhost"
+    prometheus.port: 9091
