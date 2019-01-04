@@ -24,7 +24,7 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
 
     @Override
     public void prepare(MetricRegistry metricsRegistry, Map stormConf, Map reporterConf) {
-        LOG.debug("Preparing...");
+        LOG.info("Preparing...");
         PrometheusReporter.Builder builder = PrometheusReporter.forRegistry(metricsRegistry);
 
         TimeUnit durationUnit = MetricsUtils.getMetricsDurationUnit(reporterConf);
