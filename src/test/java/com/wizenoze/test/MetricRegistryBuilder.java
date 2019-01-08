@@ -1,6 +1,7 @@
 package com.wizenoze.test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.storm.metrics2.StormMetricRegistry.metricName;
 
 import com.codahale.metrics.Clock;
 import com.codahale.metrics.Counter;
@@ -15,11 +16,20 @@ import org.apache.storm.metrics2.SimpleGauge;
 
 public class MetricRegistryBuilder {
 
-    public static final String HISTOGRAM_NAME = "histogram";
-    public static final String COUNTER_NAME = "counter";
-    public static final String METER_NAME = "meter";
-    public static final String TIMER_NAME = "timer";
-    public static final String GAUGE_NAME = "gauge";
+    public static final String HISTOGRAM_NAME =
+            metricName("histogram", "topology", "component", "stream", 1, 1);
+
+    public static final String COUNTER_NAME =
+            metricName("counter", "topology", "component", "stream", 1, 1);
+
+    public static final String METER_NAME =
+            metricName("meter", "topology", "component", "stream", 1, 1);
+
+    public static final String TIMER_NAME =
+            metricName("timer", "topology", "component", "stream", 1, 1);
+
+    public static final String GAUGE_NAME =
+            metricName("gauge", "topology", "component", "stream", 1, 1);
 
     private final List<Integer> histogramUpdates;
     private final List<Long> meterMarks;

@@ -15,16 +15,32 @@ import org.slf4j.LoggerFactory;
 
 public class PrometheusStormReporter extends ScheduledStormReporter {
 
-    private final static Logger LOG = LoggerFactory.getLogger(PrometheusStormReporter.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(PrometheusStormReporter.class);
 
-    public static final String PROMETHEUS_PREFIXED_WITH = "prometheus.prefixed.with";
-    public static final String PROMETHEUS_HOST = "prometheus.host";
-    public static final String PROMETHEUS_PORT = "prometheus.port";
-    public static final String PROMETHEUS_SCHEME = "prometheus.scheme";
+    private static final String PROMETHEUS_PREFIXED_WITH = "prometheus.prefixed.with";
+    private static final String PROMETHEUS_HOST = "prometheus.host";
+    private static final String PROMETHEUS_PORT = "prometheus.port";
+    private static final String PROMETHEUS_SCHEME = "prometheus.scheme";
+
+    private static String getMetricsPrefixedWith(Map reporterConf) {
+        return Utils.getString(reporterConf.get(PROMETHEUS_PREFIXED_WITH), null);
+    }
+
+    private static String getMetricsTargetHost(Map reporterConf) {
+        return Utils.getString(reporterConf.get(PROMETHEUS_HOST), "localhost");
+    }
+
+    private static Integer getMetricsTargetPort(Map reporterConf) {
+        return Utils.getInt(reporterConf.get(PROMETHEUS_PORT), 9091);
+    }
+
+    private static String getMetricsTargetScheme(Map reporterConf) {
+        return Utils.getString(reporterConf.get(PROMETHEUS_SCHEME), "http");
+    }
 
     @Override
     public void prepare(MetricRegistry metricsRegistry, Map stormConf, Map reporterConf) {
-        LOG.info("Preparing...");
+        LOGGER.info("Preparing...");
         PrometheusReporter.Builder builder = PrometheusReporter.forRegistry(metricsRegistry);
 
         TimeUnit durationUnit = MetricsUtils.getMetricsDurationUnit(reporterConf);
@@ -63,22 +79,6 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
 
         PushGatewayWrapper pushGatewayWrapper = new PushGatewayWrapperImpl(httpAddress);
         reporter = builder.build(pushGatewayWrapper);
-    }
-
-    private static String getMetricsPrefixedWith(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_PREFIXED_WITH), null);
-    }
-
-    private static String getMetricsTargetHost(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_HOST), "localhost");
-    }
-
-    private static Integer getMetricsTargetPort(Map reporterConf) {
-        return Utils.getInt(reporterConf.get(PROMETHEUS_PORT), 9091);
-    }
-
-    private static String getMetricsTargetScheme(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_SCHEME), "http");
     }
 
 }

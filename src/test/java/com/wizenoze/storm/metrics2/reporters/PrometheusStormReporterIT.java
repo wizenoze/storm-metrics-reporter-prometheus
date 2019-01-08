@@ -2,6 +2,7 @@ package com.wizenoze.storm.metrics2.reporters;
 
 import static org.apache.storm.Config.STORM_METRICS_REPORTERS;
 import static org.apache.storm.cluster.DaemonType.WORKER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import com.codahale.metrics.Counter;
@@ -12,16 +13,24 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.storm.metrics2.StormMetricRegistry;
 import org.apache.storm.utils.Utils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(PER_CLASS)
 class PrometheusStormReporterIT {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PrometheusStormReporterIT.class);
+
+    private static final Pattern STORM_METRIC_LINE_PATTERN =
+            Pattern.compile("storm_worker\\p{Graph}+\\p{Space}(\\d+)$");
 
     private final Map<String, Object> stormConfig;
     private final URL prometheusUrl;
@@ -62,27 +71,50 @@ class PrometheusStormReporterIT {
                 "default"
         );
 
-        for (int index = 0; index < 10; index++) {
+        final int EXPECTED_VALUE = 10;
+
+        for (int index = 0; index < EXPECTED_VALUE; index++) {
             counter.inc();
             Utils.sleep(500);
         }
 
         // Sanity check
-        Assertions.assertEquals(10, counter.getCount());
+        assertEquals(EXPECTED_VALUE, counter.getCount());
 
+        // Assert that prometheus gateway stored the last counter value
+        assertResponse(getResponse(), EXPECTED_VALUE);
+    }
+
+    private String getResponse() throws IOException {
         HttpURLConnection connection = (HttpURLConnection) prometheusUrl.openConnection();
         try {
             connection.connect();
             Scanner scanner = new Scanner(connection.getInputStream()).useDelimiter("\\A");
-            String response = scanner.next();
-            assertResponse(response);
+            return scanner.next();
         } finally {
             connection.disconnect();
         }
     }
 
-    private void assertResponse(String response) {
-        // TODO
+    private void assertResponse(String response, Integer expectedValue) {
+        LOGGER.info(response);
+
+        Scanner scanner = new Scanner(response);
+        Integer actualValue = null;
+
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            Matcher lineMatcher = STORM_METRIC_LINE_PATTERN.matcher(line);
+
+            if (lineMatcher.matches()) {
+                actualValue = Integer.valueOf(lineMatcher.group(1));
+                break;
+            }
+        }
+
+        scanner.close();
+
+        assertEquals(expectedValue, actualValue);
     }
 
 }
