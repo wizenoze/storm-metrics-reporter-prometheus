@@ -23,7 +23,7 @@ class MetricNameAndGroupingKey {
                     + "(?<topologyId>[\\p{Alnum}[-_]]+)\\."
                     + "(?<hostName>[\\p{Alnum}[-_]]+)\\."
                     + "(?<componentId>[\\p{Alnum}[-_]]+)\\."
-                    + "(?<taskId>[\\d]+)\\."
+                    + "(?<taskId>-?[\\d]+)\\."
                     + "(?<workerPort>[\\d]+)-"
                     + "(?<name>[\\p{Print}]+)");
 
@@ -35,7 +35,7 @@ class MetricNameAndGroupingKey {
                     + "(?<hostName>[\\p{Alnum}[-_]]+)\\."
                     + "(?<componentId>[\\p{Alnum}[-_]]+)\\."
                     + "(?<streamId>[\\p{Alnum}[-_]]+)\\."
-                    + "(?<taskId>[\\d]+)\\."
+                    + "(?<taskId>-?[\\d]+)\\."
                     + "(?<workerPort>[\\d]+)-"
                     + "(?<name>[\\p{Print}]+)");
 
@@ -46,7 +46,7 @@ class MetricNameAndGroupingKey {
                     + "(?<topologyId>[\\p{Alnum}[-_]]+)\\."
                     + "(?<hostName>[\\p{Alnum}[-_]]+)\\."
                     + "(?<componentId>[\\p{Alnum}[-_]]+)\\."
-                    + "(?<taskId>[\\d]+)\\."
+                    + "(?<taskId>-?[\\d]+)\\."
                     + "(?<workerPort>[\\d]+)-"
                     + "(?<name>[\\p{Print}]+)");
 
