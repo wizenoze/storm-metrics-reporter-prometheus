@@ -5,6 +5,8 @@ import static org.apache.storm.metrics2.StormMetricRegistry.metricName;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
@@ -60,6 +62,7 @@ class MetricNameAndGroupingKeyTest {
                         hasEntry("topology_id", "siteTestCrawlIndexDelete-9-1544624008"),
                         hasEntry("host_name", "null"),
                         hasEntry("component_id", "documentExtractor"),
+                        not(hasKey("stream_id")),
                         hasEntry("task_id", "28"),
                         hasEntry("worker_port", "6701")
                 )
@@ -82,6 +85,7 @@ class MetricNameAndGroupingKeyTest {
                         hasEntry("topology_id", "siteTestCrawlIndexDelete-9-1544624008"),
                         hasEntry("host_name", "null"),
                         hasEntry("component_id", "__system"),
+                        not(hasKey("stream_id")),
                         hasEntry("task_id", "-1"),
                         hasEntry("worker_port", "6700")
                 )

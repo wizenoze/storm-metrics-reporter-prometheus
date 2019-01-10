@@ -72,13 +72,19 @@ class MetricNameAndGroupingKey {
     private static void addToGroupingKey(
             String groupName, Matcher matcher, Map<String, String> groupingKey) {
 
+        String value = null;
         try {
-            String value = matcher.group(groupName);
-            String name = groupName.replaceAll("(\\p{Upper})", "_$1").toLowerCase();
-            groupingKey.put(name, value);
+            value = matcher.group(groupName);
         } catch (IllegalArgumentException e) {
             LOGGER.debug(e.getMessage(), e);
         }
+
+        if (value == null || value.length() == 0) {
+            return;
+        }
+
+        String name = groupName.replaceAll("(\\p{Upper})", "_$1").toLowerCase();
+        groupingKey.put(name, value);
     }
 
     String getName() {
