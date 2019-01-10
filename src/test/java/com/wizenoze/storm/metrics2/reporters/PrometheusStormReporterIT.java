@@ -3,6 +3,7 @@ package com.wizenoze.storm.metrics2.reporters;
 import static java.util.Collections.unmodifiableMap;
 import static org.apache.storm.Config.STORM_METRICS_REPORTERS;
 import static org.apache.storm.cluster.DaemonType.WORKER;
+import static org.apache.storm.utils.Utils.hostname;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -60,7 +61,7 @@ class PrometheusStormReporterIT {
     private final URL prometheusUrl;
     private final URL metricsUrl;
 
-    public PrometheusStormReporterIT() throws MalformedURLException {
+    public PrometheusStormReporterIT() throws Exception {
         stormConfig = Utils.findAndReadConfigFile("test-storm.yaml");
 
         List<Map<String, Object>> reporterList =
@@ -69,6 +70,11 @@ class PrometheusStormReporterIT {
         Map<String, Object> reporterConfig = reporterList.get(0);
 
         Map<String, String> groupingKey = new LinkedHashMap<>();
+
+        String hostName = hostname();
+        groupingKey.put("instance", hostName);
+        groupingKey.put("host_name", hostName.replaceAll("\\.", "_"));
+
         groupingKey.put("topology_id", "test-topology");
         groupingKey.put("component_id", "test-component");
         groupingKey.put("stream_id", "test-stream");
