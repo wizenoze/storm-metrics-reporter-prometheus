@@ -1,20 +1,29 @@
 package com.wizenoze.storm.metrics2.reporters;
 
+import static java.util.Collections.unmodifiableMap;
 import static org.apache.storm.Config.STORM_METRICS_REPORTERS;
 import static org.apache.storm.cluster.DaemonType.WORKER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import com.codahale.metrics.Counter;
+import io.prometheus.client.exporter.PushGateway;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.storm.metrics2.DisruptorMetrics;
 import org.apache.storm.metrics2.StormMetricRegistry;
 import org.apache.storm.utils.Utils;
 import org.junit.jupiter.api.AfterAll;
@@ -30,10 +39,26 @@ class PrometheusStormReporterIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(PrometheusStormReporterIT.class);
 
     private static final Pattern STORM_METRIC_LINE_PATTERN =
-            Pattern.compile("storm_worker\\p{Graph}+\\p{Space}(\\d+)$");
+            Pattern.compile("storm_worker_([\\p{Alnum}[_]]+)\\{\\p{Graph}+\\}\\p{Space}(\\d+)$");
+
+    private static final String[] INCLUDED_METRIC_NAMES = {
+            "emitted", "acked",
+            "disruptor-executor[1 1]-send-queue-percent-full",
+            "disruptor-executor[1 1]-send-queue-overflow"
+    };
+
+    private static final String[] EXCLUDED_METRIC_NAMES = {
+            "transferred",
+            "disruptor-executor[1 1]-send-queue-arrival-rate",
+            "disruptor-executor[1 1]-send-queue-capacity"
+    };
+
+    private static final Integer EXPECTED_VALUE = 10;
 
     private final Map<String, Object> stormConfig;
+    private final Map<String, String> groupingKey;
     private final URL prometheusUrl;
+    private final URL metricsUrl;
 
     public PrometheusStormReporterIT() throws MalformedURLException {
         stormConfig = Utils.findAndReadConfigFile("test-storm.yaml");
@@ -43,50 +68,77 @@ class PrometheusStormReporterIT {
 
         Map<String, Object> reporterConfig = reporterList.get(0);
 
+        Map<String, String> groupingKey = new LinkedHashMap<>();
+        groupingKey.put("topology_id", "test-topology");
+        groupingKey.put("component_id", "test-component");
+        groupingKey.put("stream_id", "test-stream");
+        groupingKey.put("task_id", "1");
+        groupingKey.put("worker_port", "6700");
+
+        this.groupingKey = unmodifiableMap(groupingKey);
+
         String scheme = (String) reporterConfig.get("prometheus.scheme");
         String host = (String) reporterConfig.get("prometheus.host");
         Integer port = (Integer) reporterConfig.get("prometheus.port");
 
-        prometheusUrl = new URL(scheme, host, port, "/metrics");
+        prometheusUrl = new URL(scheme, host, port, "");
+        metricsUrl = new URL(scheme, host, port, "/metrics");
+
     }
 
     @BeforeAll
     void start() {
         StormMetricRegistry.start(stormConfig, WORKER);
+
+        startCounters();
     }
 
     @AfterAll
-    void stop() {
+    void stop() throws IOException {
         StormMetricRegistry.stop();
+
+        new PushGateway(prometheusUrl).delete("storm", groupingKey);
     }
 
     @Test
-    void reports() throws IOException {
-        Counter counter = StormMetricRegistry.counter(
-                "test-counter",
-                "test-topology",
-                "test-component",
-                1,
-                6700,
-                "default"
+    void givenIncludedMetricNames_whenReported_thenValuePushed() throws IOException {
+        String response = getResponse();
+        LOGGER.info(response);
+
+        assertMetricValue(EXPECTED_VALUE, "emitted_count", response);
+        assertMetricValue(EXPECTED_VALUE, "acked_count", response);
+
+        assertMetricValue(
+                EXPECTED_VALUE,
+                "disruptor_executor_1_1__send_queue_percent_full",
+                response
         );
 
-        final int EXPECTED_VALUE = 10;
+        assertMetricValue(EXPECTED_VALUE, "disruptor_executor_1_1__send_queue_overflow", response);
+    }
 
-        for (int index = 0; index < EXPECTED_VALUE; index++) {
-            counter.inc();
-            Utils.sleep(500);
+    @Test
+    void givenExcludedMetricNames_whenReported_thenValuePushed() throws IOException {
+        String response = getResponse();
+        LOGGER.info(response);
+
+        assertMetricValue(null, "transferred_count", response);
+        assertMetricValue(null, "disruptor_executor_1_1__send_queue_arrival_rate", response);
+        assertMetricValue(null, "disruptor_executor_1_1__send_queue_capacity", response);
+    }
+
+    private void assertMetricValue(Integer expectedValue, String name, String response) {
+        Integer actualValue = getMetricValue(response, name);
+
+        if (expectedValue == null) {
+            assertNull(actualValue, name);
+        } else {
+            assertEquals(expectedValue, actualValue, name);
         }
-
-        // Sanity check
-        assertEquals(EXPECTED_VALUE, counter.getCount());
-
-        // Assert that prometheus gateway stored the last counter value
-        assertResponse(getResponse(), EXPECTED_VALUE);
     }
 
     private String getResponse() throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) prometheusUrl.openConnection();
+        HttpURLConnection connection = (HttpURLConnection) metricsUrl.openConnection();
         try {
             connection.connect();
             Scanner scanner = new Scanner(connection.getInputStream()).useDelimiter("\\A");
@@ -96,9 +148,7 @@ class PrometheusStormReporterIT {
         }
     }
 
-    private void assertResponse(String response, Integer expectedValue) {
-        LOGGER.info(response);
-
+    private Integer getMetricValue(String response, String name) {
         Scanner scanner = new Scanner(response);
         Integer actualValue = null;
 
@@ -106,15 +156,116 @@ class PrometheusStormReporterIT {
             String line = scanner.nextLine();
             Matcher lineMatcher = STORM_METRIC_LINE_PATTERN.matcher(line);
 
-            if (lineMatcher.matches()) {
-                actualValue = Integer.valueOf(lineMatcher.group(1));
+            if (!lineMatcher.matches()) {
+                continue;
+            }
+
+            if (name.equals(lineMatcher.group(1))) {
+                actualValue = Integer.valueOf(lineMatcher.group(2));
                 break;
             }
         }
 
         scanner.close();
 
-        assertEquals(expectedValue, actualValue);
+        return actualValue;
+    }
+
+    private void startCounters() {
+        Collection<MetricChanger> metricChangers =
+                new ArrayList<>(INCLUDED_METRIC_NAMES.length + EXCLUDED_METRIC_NAMES.length);
+
+        for (String name : INCLUDED_METRIC_NAMES) {
+            if (name.startsWith("disruptor")) {
+                metricChangers.add(new DisruptorMetricsChanger(name));
+            } else {
+                metricChangers.add(new CounterIncrementer(name));
+            }
+        }
+
+        for (String name : EXCLUDED_METRIC_NAMES) {
+            if (name.startsWith("disruptor")) {
+                metricChangers.add(new DisruptorMetricsChanger(name));
+            } else {
+                metricChangers.add(new CounterIncrementer(name));
+            }
+        }
+
+        ForkJoinPool forkJoinPool = new ForkJoinPool(metricChangers.size());
+
+        forkJoinPool.invokeAll(metricChangers);
+    }
+
+    private abstract class MetricChanger implements Callable<Void> {
+
+        final String name;
+
+        MetricChanger(String name) {
+            this.name = name;
+        }
+
+        abstract void changeMetric();
+
+        @Override
+        public Void call() {
+            changeMetric();
+            return null;
+        }
+
+    }
+
+    private class CounterIncrementer extends MetricChanger {
+
+        final Counter counter;
+
+        CounterIncrementer(String name) {
+            super(name);
+
+            counter = StormMetricRegistry.counter(
+                    name,
+                    groupingKey.get("topology_id"),
+                    groupingKey.get("component_id"),
+                    Integer.valueOf(groupingKey.get("task_id")),
+                    Integer.valueOf(groupingKey.get("worker_port")),
+                    groupingKey.get("stream_id")
+            );
+        }
+
+        @Override
+        void changeMetric() {
+            for (int index = 0; index < EXPECTED_VALUE; index++) {
+                counter.inc();
+                LOGGER.info("Incremented {}, current value: {}.", name, counter.getCount());
+                Utils.sleep(500);
+            }
+        }
+
+    }
+
+    private class DisruptorMetricsChanger extends MetricChanger {
+
+        final DisruptorMetrics disruptorMetrics;
+
+        public DisruptorMetricsChanger(String name) {
+            super(name);
+
+            disruptorMetrics = StormMetricRegistry.disruptorMetrics(
+                    name,
+                    groupingKey.get("topology_id"),
+                    groupingKey.get("component_id"),
+                    Integer.valueOf(groupingKey.get("task_id")),
+                    Integer.valueOf(groupingKey.get("worker_port"))
+            );
+        }
+
+        @Override
+        void changeMetric() {
+            disruptorMetrics.setArrivalRate(Double.valueOf(EXPECTED_VALUE));
+            disruptorMetrics.setCapacity(Long.valueOf(EXPECTED_VALUE));
+            disruptorMetrics.setOverflow(Long.valueOf(EXPECTED_VALUE));
+            disruptorMetrics.setPercentFull(Float.valueOf(EXPECTED_VALUE));
+        }
+
     }
 
 }
