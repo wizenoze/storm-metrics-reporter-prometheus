@@ -33,9 +33,13 @@ storm.metrics.reporters:
         - "worker"
     report.period: 60
     report.period.units: "SECONDS"
+    filter:
+      class: "org.apache.storm.metrics2.filters.RegexFilter"
+      expression: "storm\\.worker\\..+\\..+\\..+\\.(?:.+\\.)?-?[\\d]+\\.\\d+-(emitted|acked|disruptor-executor.+-queue-(?:percent-full|overflow))"
+
     prometheus.scheme: "http"
     prometheus.host: "localhost"
     prometheus.port: 9091
 ```
 
-Point `prometheus.host` and `prometheus.port` to your [Prometheus Push Gateway](https://github.com/prometheus/pushgateway). You may also adjust `report.period` and `report.period.units` to make it aligned with Prometheus' scrape interval.
+Point `prometheus.host` and `prometheus.port` to your [Prometheus Push Gateway](https://github.com/prometheus/pushgateway). You may adjust `report.period` and `report.period.units` to make it aligned with Prometheus' scrape interval, as well as the filter expression according to your needs.
