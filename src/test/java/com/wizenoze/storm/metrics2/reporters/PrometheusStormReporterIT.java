@@ -42,15 +42,11 @@ class PrometheusStormReporterIT {
             Pattern.compile("storm_worker_([\\p{Alnum}[_]]+)\\{\\p{Graph}+\\}\\p{Space}(\\d+)$");
 
     private static final String[] INCLUDED_METRIC_NAMES = {
-            "emitted", "acked",
-            "disruptor-executor[1 1]-send-queue-percent-full",
-            "disruptor-executor[1 1]-send-queue-overflow"
+            "emitted", "acked"
     };
 
     private static final String[] EXCLUDED_METRIC_NAMES = {
-            "transferred",
-            "disruptor-executor[1 1]-send-queue-arrival-rate",
-            "disruptor-executor[1 1]-send-queue-capacity"
+            "transferred", "test"
     };
 
     private static final Integer EXPECTED_VALUE = 10;
@@ -80,7 +76,7 @@ class PrometheusStormReporterIT {
         groupingKey.put("task_id", "1");
         groupingKey.put("worker_port", "6700");
 
-        this.groupingKey = unmodifiableMap(groupingKey);
+        this.groupingKey = groupingKey;
 
         String scheme = (String) reporterConfig.get("prometheus.scheme");
         String host = (String) reporterConfig.get("prometheus.host");
@@ -102,6 +98,10 @@ class PrometheusStormReporterIT {
     void stop() throws IOException {
         StormMetricRegistry.stop();
 
+        new PushGateway(prometheusUrl).delete("storm", groupingKey);
+
+        // Remove disruptor executor queue metrics
+        groupingKey.remove("stream_id");
         new PushGateway(prometheusUrl).delete("storm", groupingKey);
     }
 
@@ -128,6 +128,7 @@ class PrometheusStormReporterIT {
         LOGGER.info(response);
 
         assertMetricValue(null, "transferred_count", response);
+        assertMetricValue(null, "test_count", response);
         assertMetricValue(null, "disruptor_executor_1_1__send_queue_arrival_rate", response);
         assertMetricValue(null, "disruptor_executor_1_1__send_queue_capacity", response);
     }
@@ -178,23 +179,17 @@ class PrometheusStormReporterIT {
 
     private void startCounters() {
         Collection<MetricChanger> metricChangers =
-                new ArrayList<>(INCLUDED_METRIC_NAMES.length + EXCLUDED_METRIC_NAMES.length);
+                new ArrayList<>(INCLUDED_METRIC_NAMES.length + EXCLUDED_METRIC_NAMES.length + 1);
 
         for (String name : INCLUDED_METRIC_NAMES) {
-            if (name.startsWith("disruptor")) {
-                metricChangers.add(new DisruptorMetricsChanger(name));
-            } else {
-                metricChangers.add(new CounterIncrementer(name));
-            }
+            metricChangers.add(new CounterIncrementer(name));
         }
 
         for (String name : EXCLUDED_METRIC_NAMES) {
-            if (name.startsWith("disruptor")) {
-                metricChangers.add(new DisruptorMetricsChanger(name));
-            } else {
-                metricChangers.add(new CounterIncrementer(name));
-            }
+            metricChangers.add(new CounterIncrementer(name));
         }
+
+        metricChangers.add(new DisruptorMetricsChanger("disruptor-executor[1 1]-send-queue"));
 
         ForkJoinPool forkJoinPool = new ForkJoinPool(metricChangers.size());
 

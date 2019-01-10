@@ -9,7 +9,7 @@ storm.metrics.reporters:
     report.period.units: "SECONDS"
     filter:
       class: "org.apache.storm.metrics2.filters.RegexFilter"
-      expression: "storm\\.worker\\..+\\..+\\..+\\.(?:.+\\.)?-?[\\d]+\\.\\d+-(emitted|acked|disruptor-.+-queue.+-(?:percent-full|overflow))"
+      expression: "storm\\.worker\\..+\\..+\\..+\\.(?:.+\\.)?-?[\\d]+\\.\\d+-(emitted|acked|disruptor-executor.+-queue-(?:percent-full|overflow))"
     prometheus.scheme: "http"
     prometheus.host: "localhost"
     prometheus.port: 9091
