@@ -12,7 +12,6 @@ import com.codahale.metrics.Counter;
 import io.prometheus.client.exporter.PushGateway;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -252,7 +251,7 @@ class PrometheusStormReporterIT {
 
         final DisruptorMetrics disruptorMetrics;
 
-        public DisruptorMetricsChanger(String name) {
+        DisruptorMetricsChanger(String name) {
             super(name);
 
             disruptorMetrics = StormMetricRegistry.disruptorMetrics(
