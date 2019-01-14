@@ -26,7 +26,7 @@ class MetricNameAndGroupingKey {
                     + "(?:(?<streamId>[\\p{Alnum}[-_]]+)\\.)?"
                     + "(?<taskId>-?[\\d]+)\\."
                     + "(?<workerPort>[\\d]+)-"
-                    + "(?<name>[\\p{Print}]+)");
+                    + "(?<name>([\\p{Alnum}[-_]]+|disruptor-[\\p{Alnum}[-_]]+\\[(?<threadId>-?[\\d]+\\p{Space}-?[\\d]+)\\]-[\\p{Alnum}[-_]]+))");
 
     private final String name;
     private final Map<String, String> groupingKey;
@@ -52,9 +52,23 @@ class MetricNameAndGroupingKey {
         addToGroupingKey("taskId", matcher, groupingKey);
         addToGroupingKey("workerPort", matcher, groupingKey);
 
-        String name = "storm_" + matcher.group("type") + "_" + escapeName(matcher.group("name"));
+        String threadId = matcher.group("threadId");
+        String name = matcher.group("name");
 
-        return new MetricNameAndGroupingKey(name, groupingKey);
+        // This is a dirty hack to make disruptor metrics usable
+        if (threadId != null) {
+            int tidStartPos = name.indexOf('[');
+            int tidEndPost = name.lastIndexOf(']');
+            if (tidStartPos > 0 && tidEndPost > 0) {
+                name = name.substring(0, tidStartPos) + name.substring(tidEndPost + 1);
+            }
+
+            addToGroupingKey("threadId", matcher, groupingKey);
+        }
+
+        String metricName = "storm_" + matcher.group("type") + "_" + escapeName(name);
+
+        return new MetricNameAndGroupingKey(metricName, groupingKey);
     }
 
     private static String escapeName(String name) {
