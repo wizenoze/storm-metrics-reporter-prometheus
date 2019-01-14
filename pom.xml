@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>nl.wizenoze</groupId>
+    <groupId>com.wizenoze</groupId>
     <artifactId>storm-metrics-reporter-prometheus</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
@@ -27,10 +27,21 @@
     </licenses>
 
     <scm>
-        <connection>git@github.com:wizenoze/storm-metrics-reporter-prometheus.git</connection>
+        <connection>scm:git:git@github.com:wizenoze/storm-metrics-reporter-prometheus.git</connection>
         <url>https://github.com/wizenoze/storm-metrics-reporter-prometheus</url>
         <tag>HEAD</tag>
     </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <junit.jupiter.version>5.1.0</junit.jupiter.version>
