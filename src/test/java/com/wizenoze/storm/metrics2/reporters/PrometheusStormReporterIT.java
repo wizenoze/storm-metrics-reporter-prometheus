@@ -114,11 +114,11 @@ class PrometheusStormReporterIT {
 
         assertMetricValue(
                 EXPECTED_VALUE,
-                "disruptor_executor_1_1__send_queue_percent_full",
+                "disruptor_executor_send_queue_percent_full",
                 response
         );
 
-        assertMetricValue(EXPECTED_VALUE, "disruptor_executor_1_1__send_queue_overflow", response);
+        assertMetricValue(EXPECTED_VALUE, "disruptor_executor_send_queue_overflow", response);
     }
 
     @Test
@@ -128,8 +128,8 @@ class PrometheusStormReporterIT {
 
         assertMetricValue(null, "transferred_count", response);
         assertMetricValue(null, "test_count", response);
-        assertMetricValue(null, "disruptor_executor_1_1__send_queue_arrival_rate", response);
-        assertMetricValue(null, "disruptor_executor_1_1__send_queue_capacity", response);
+        assertMetricValue(null, "disruptor_executor_send_queue_arrival_rate", response);
+        assertMetricValue(null, "disruptor_executor_send_queue_capacity", response);
     }
 
     private void assertMetricValue(Integer expectedValue, String name, String response) {
