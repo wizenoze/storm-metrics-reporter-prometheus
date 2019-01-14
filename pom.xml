@@ -4,7 +4,7 @@
 
     <groupId>com.wizenoze</groupId>
     <artifactId>storm-metrics-reporter-prometheus</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2-SNAPSHOT</version>
 
     <packaging>jar</packaging>
 
@@ -27,7 +27,7 @@
     <scm>
         <connection>scm:git:git@github.com:wizenoze/storm-metrics-reporter-prometheus.git</connection>
         <url>https://github.com/wizenoze/storm-metrics-reporter-prometheus</url>
-        <tag>0.0.1</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
