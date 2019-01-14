@@ -1,6 +1,5 @@
 package com.wizenoze.storm.metrics2.reporters;
 
-import static java.util.Collections.unmodifiableMap;
 import static org.apache.storm.Config.STORM_METRICS_REPORTERS;
 import static org.apache.storm.cluster.DaemonType.WORKER;
 import static org.apache.storm.utils.Utils.hostname;
