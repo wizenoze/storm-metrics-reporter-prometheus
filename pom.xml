@@ -4,7 +4,7 @@
 
     <groupId>com.wizenoze</groupId>
     <artifactId>storm-metrics-reporter-prometheus</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.2</version>
 
     <packaging>jar</packaging>
 
@@ -171,7 +171,7 @@
         <dependency>
             <groupId>io.prometheus</groupId>
             <artifactId>simpleclient_pushgateway</artifactId>
-            <version>0.6.0</version>
+            <version>0.9.0</version>
         </dependency>
 
         <dependency>

@@ -229,7 +229,7 @@ public class PrometheusReporter extends ScheduledReporter {
         try {
             pushGatewayWrapper.pushAdd(registry, JOB_NAME, groupingKey);
         } catch (IOException e) {
-            LOGGER.error("Unable to push {} to Prometheus", e);
+            LOGGER.error("Unable to push to Prometheus", e);
         }
     }
 
