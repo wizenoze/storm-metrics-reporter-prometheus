@@ -1,3 +1,7 @@
+.classpath
+.factorypath
+.project
+*.prefs
 # Compiled class file
 *.class
 
@@ -28,3 +32,5 @@ target
 .attach_*
 pom.xml.versionsBackup
 pom.xml.releaseBackup
+.vscode/settings.json
+.gitignore

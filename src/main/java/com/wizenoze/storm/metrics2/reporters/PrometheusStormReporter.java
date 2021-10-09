@@ -6,10 +6,10 @@ import com.wizenoze.prometheus.PushGatewayWrapper;
 import com.wizenoze.prometheus.PushGatewayWrapperImpl;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.apache.storm.daemon.metrics.MetricsUtils;
+import org.apache.storm.daemon.metrics.ClientMetricsUtils;
 import org.apache.storm.metrics2.filters.StormMetricsFilter;
 import org.apache.storm.metrics2.reporters.ScheduledStormReporter;
-import org.apache.storm.utils.Utils;
+import org.apache.storm.utils.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,19 +23,19 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
     private static final String PROMETHEUS_SCHEME = "prometheus.scheme";
 
     private static String getMetricsPrefixedWith(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_PREFIXED_WITH), null);
+        return ObjectReader.getString(reporterConf.get(PROMETHEUS_PREFIXED_WITH), null);
     }
 
     private static String getMetricsTargetHost(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_HOST), "localhost");
+        return ObjectReader.getString(reporterConf.get(PROMETHEUS_HOST), "localhost");
     }
 
     private static Integer getMetricsTargetPort(Map reporterConf) {
-        return Utils.getInt(reporterConf.get(PROMETHEUS_PORT), 9091);
+        return ObjectReader.getInt(reporterConf.get(PROMETHEUS_PORT), 9091);
     }
 
     private static String getMetricsTargetScheme(Map reporterConf) {
-        return Utils.getString(reporterConf.get(PROMETHEUS_SCHEME), "http");
+        return ObjectReader.getString(reporterConf.get(PROMETHEUS_SCHEME), "http");
     }
 
     @Override
@@ -43,12 +43,11 @@ public class PrometheusStormReporter extends ScheduledStormReporter {
         LOGGER.info("Preparing...");
         PrometheusReporter.Builder builder = PrometheusReporter.forRegistry(metricsRegistry);
 
-        TimeUnit durationUnit = MetricsUtils.getMetricsDurationUnit(reporterConf);
+        TimeUnit durationUnit = ClientMetricsUtils.getMetricsDurationUnit(reporterConf);
         if (durationUnit != null) {
             builder.convertDurationsTo(durationUnit);
         }
-
-        TimeUnit rateUnit = MetricsUtils.getMetricsRateUnit(reporterConf);
+        TimeUnit rateUnit = ClientMetricsUtils.getMetricsRateUnit(reporterConf);
         if (rateUnit != null) {
             builder.convertRatesTo(rateUnit);
         }
