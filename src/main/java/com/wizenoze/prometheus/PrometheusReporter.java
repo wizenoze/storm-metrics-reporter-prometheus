@@ -146,14 +146,14 @@ public class PrometheusReporter extends ScheduledReporter {
     private void pushGauge(String originalName, Gauge gauge) {
         MetricNameAndGroupingKey metric = parseMetric(originalName);
         CollectorRegistry registry = new CollectorRegistry();
-        registerGauge(registry, prefix(metric.getName()), originalName, gauge.getValue());
+        registerGauge(registry, prefix(metric.getName()), metric.getHelp(), gauge.getValue());
         pushMetrics(registry, metric.getGroupingKey());
     }
 
     private void pushCounter(String originalName, Counter counter) {
         MetricNameAndGroupingKey metric = parseMetric(originalName);
         CollectorRegistry registry = new CollectorRegistry();
-        registerGauge(registry, prefix(metric.getName(), "count"), originalName,
+        registerGauge(registry, prefix(metric.getName(), "count"), metric.getHelp(),
                 counter.getCount());
         pushMetrics(registry, metric.getGroupingKey());
     }
@@ -163,20 +163,21 @@ public class PrometheusReporter extends ScheduledReporter {
 
         CollectorRegistry registry = new CollectorRegistry();
         String name = metric.getName();
+        String help = metric.getHelp();
 
-        registerGauge(registry, prefix(name, "count"), originalName, histogram.getCount());
+        registerGauge(registry, prefix(name, "count"), help, histogram.getCount());
 
         Snapshot snapshot = histogram.getSnapshot();
-        registerGauge(registry, prefix(name, "max"), originalName, snapshot.getMax());
-        registerGauge(registry, prefix(name, "mean"), originalName, snapshot.getMean());
-        registerGauge(registry, prefix(name, "min"), originalName, snapshot.getMin());
-        registerGauge(registry, prefix(name, "stddev"), originalName, snapshot.getStdDev());
-        registerGauge(registry, prefix(name, "p50"), originalName, snapshot.getMedian());
-        registerGauge(registry, prefix(name, "p75"), originalName, snapshot.get75thPercentile());
-        registerGauge(registry, prefix(name, "p95"), originalName, snapshot.get95thPercentile());
-        registerGauge(registry, prefix(name, "p98"), originalName, snapshot.get98thPercentile());
-        registerGauge(registry, prefix(name, "p99"), originalName, snapshot.get99thPercentile());
-        registerGauge(registry, prefix(name, "p999"), originalName, snapshot.get999thPercentile());
+        registerGauge(registry, prefix(name, "max"), help, snapshot.getMax());
+        registerGauge(registry, prefix(name, "mean"), help, snapshot.getMean());
+        registerGauge(registry, prefix(name, "min"), help, snapshot.getMin());
+        registerGauge(registry, prefix(name, "stddev"), help, snapshot.getStdDev());
+        registerGauge(registry, prefix(name, "p50"), help, snapshot.getMedian());
+        registerGauge(registry, prefix(name, "p75"), help, snapshot.get75thPercentile());
+        registerGauge(registry, prefix(name, "p95"), help, snapshot.get95thPercentile());
+        registerGauge(registry, prefix(name, "p98"), help, snapshot.get98thPercentile());
+        registerGauge(registry, prefix(name, "p99"), help, snapshot.get99thPercentile());
+        registerGauge(registry, prefix(name, "p999"), help, snapshot.get999thPercentile());
 
         pushMetrics(registry, metric.getGroupingKey());
     }
@@ -187,7 +188,7 @@ public class PrometheusReporter extends ScheduledReporter {
         CollectorRegistry registry = new CollectorRegistry();
         String name = metric.getName();
 
-        doRegisterMetered(registry, name, originalName, meter);
+        doRegisterMetered(registry, name, metric.getHelp(), meter);
 
         pushMetrics(registry, metric.getGroupingKey());
     }
@@ -197,44 +198,45 @@ public class PrometheusReporter extends ScheduledReporter {
 
         CollectorRegistry registry = new CollectorRegistry();
         String name = metric.getName();
+        String help = metric.getHelp();
         Snapshot snapshot = timer.getSnapshot();
 
-        registerGauge(registry, prefix(name, "max"), originalName,
+        registerGauge(registry, prefix(name, "max"), help,
                 convertDuration(snapshot.getMax()));
-        registerGauge(registry, prefix(name, "mean"), originalName,
+        registerGauge(registry, prefix(name, "mean"), help,
                 convertDuration(snapshot.getMean()));
-        registerGauge(registry, prefix(name, "min"), originalName,
+        registerGauge(registry, prefix(name, "min"), help,
                 convertDuration(snapshot.getMin()));
-        registerGauge(registry, prefix(name, "stddev"), originalName,
+        registerGauge(registry, prefix(name, "stddev"), help,
                 convertDuration(snapshot.getStdDev()));
-        registerGauge(registry, prefix(name, "p50"), originalName,
+        registerGauge(registry, prefix(name, "p50"), help,
                 convertDuration(snapshot.getMedian()));
-        registerGauge(registry, prefix(name, "p75"), originalName,
+        registerGauge(registry, prefix(name, "p75"), help,
                 convertDuration(snapshot.get75thPercentile()));
-        registerGauge(registry, prefix(name, "p95"), originalName,
+        registerGauge(registry, prefix(name, "p95"), help,
                 convertDuration(snapshot.get95thPercentile()));
-        registerGauge(registry, prefix(name, "p98"), originalName,
+        registerGauge(registry, prefix(name, "p98"), help,
                 convertDuration(snapshot.get98thPercentile()));
-        registerGauge(registry, prefix(name, "p99"), originalName,
+        registerGauge(registry, prefix(name, "p99"), help,
                 convertDuration(snapshot.get99thPercentile()));
-        registerGauge(registry, prefix(name, "p999"), originalName,
+        registerGauge(registry, prefix(name, "p999"), help,
                 convertDuration(snapshot.get999thPercentile()));
 
-        doRegisterMetered(registry, name, originalName, timer);
+        doRegisterMetered(registry, name, name, timer);
 
         pushMetrics(registry, metric.getGroupingKey());
     }
 
-    private void doRegisterMetered(CollectorRegistry registry, String name, String originalName,
+    private void doRegisterMetered(CollectorRegistry registry, String name, String help,
             Metered meter) {
-        registerGauge(registry, prefix(name, "count"), originalName, meter.getCount());
-        registerGauge(registry, prefix(name, "m1_rate"), originalName,
+        registerGauge(registry, prefix(name, "count"), help, meter.getCount());
+        registerGauge(registry, prefix(name, "m1_rate"), help,
                 convertRate(meter.getOneMinuteRate()));
-        registerGauge(registry, prefix(name, "m5_rate"), originalName,
+        registerGauge(registry, prefix(name, "m5_rate"), help,
                 convertRate(meter.getFiveMinuteRate()));
-        registerGauge(registry, prefix(name, "m15_rate"), originalName,
+        registerGauge(registry, prefix(name, "m15_rate"), help,
                 convertRate(meter.getFifteenMinuteRate()));
-        registerGauge(registry, prefix(name, "mean_rate"), originalName,
+        registerGauge(registry, prefix(name, "mean_rate"), help,
                 convertRate(meter.getMeanRate()));
     }
 

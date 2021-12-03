@@ -33,10 +33,12 @@ class MetricNameAndGroupingKey {
                     + "(?<name>(disruptor-[\\p{Alnum}[-_]]+\\[(?<threadId>-?[\\d]+\\p{Space}-?[\\d]+)\\]-[\\p{Alnum}[-_]]+)|.+)");
 
     private final String name;
+    private final String help;
     private final Map<String, String> groupingKey;
 
-    private MetricNameAndGroupingKey(String name, Map<String, String> groupingKey) {
+    private MetricNameAndGroupingKey(String name, String help, Map<String, String> groupingKey) {
         this.name = name;
+        this.help = help;
         this.groupingKey = groupingKey;
     }
 
@@ -72,7 +74,7 @@ class MetricNameAndGroupingKey {
 
         String metricName = "storm_" + matcher.group("type") + "_" + escapeName(name);
 
-        return new MetricNameAndGroupingKey(metricName, groupingKey);
+        return new MetricNameAndGroupingKey(metricName, name, groupingKey);
     }
 
     private static String escapeName(String name) {
@@ -107,6 +109,10 @@ class MetricNameAndGroupingKey {
 
     String getName() {
         return name;
+    }
+
+    String getHelp() {
+        return help;
     }
 
     Map<String, String> getGroupingKey() {
