@@ -15,6 +15,7 @@ import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 import io.prometheus.client.CollectorRegistry;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
@@ -247,8 +248,11 @@ public class PrometheusReporter extends ScheduledReporter {
     }
 
     private void registerGauge(CollectorRegistry registry, String name, String help, Object value) {
-        assert (value instanceof Number);
-        registerGauge(registry, name, help, (Number) value);
+        // Some values are just Collections#EmptySet(), so silent drop the empty data instead of asserting
+        // FIXME: I'm clearly not a Java developer, there has got to be a more idomatic way to do this
+        if (value instanceof Number) {
+            registerGauge(registry, name, help, (Number) value);
+        }
     }
 
     private String prefix(String... components) {
