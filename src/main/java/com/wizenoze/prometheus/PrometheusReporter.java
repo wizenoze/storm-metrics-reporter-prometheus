@@ -82,23 +82,63 @@ public class PrometheusReporter extends ScheduledReporter {
         CollectorRegistry registry = new CollectorRegistry();
 
         for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
-            pushGauge(entry.getKey(), entry.getValue());
+            try {
+                pushGauge(entry.getKey(), entry.getValue());
+            }
+            catch (UnsupportedMetricName e) {
+                LOGGER.warn("Metric name is unsupported, dropped: {}", entry.getKey());
+            }
+            catch (IllegalArgumentException e) {
+                LOGGER.error("Unable to push metric, dropped: {}", entry.getKey(), e);
+            }
         }
 
         for (Map.Entry<String, Counter> entry : counters.entrySet()) {
-            pushCounter(entry.getKey(), entry.getValue());
+            try {
+                pushCounter(entry.getKey(), entry.getValue());
+            }
+            catch (UnsupportedMetricName e) {
+                LOGGER.warn("Metric name is unsupported, dropped: {}", entry.getKey());
+            }
+            catch (IllegalArgumentException e) {
+                LOGGER.error("Unable to push metric, dropped: {}", entry.getKey(), e);
+            }
         }
 
         for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
-            pushHistogram(entry.getKey(), entry.getValue());
+            try {
+                pushHistogram(entry.getKey(), entry.getValue());
+            }
+            catch (UnsupportedMetricName e) {
+                LOGGER.warn("Metric name is unsupported, dropped: {}", entry.getKey());
+            }
+            catch (IllegalArgumentException e) {
+                LOGGER.error("Unable to push metric, dropped: {}", entry.getKey(), e);
+            }
         }
 
         for (Map.Entry<String, Meter> entry : meters.entrySet()) {
-            pushMetered(entry.getKey(), entry.getValue());
+            try {
+                pushMetered(entry.getKey(), entry.getValue());
+            }
+            catch (UnsupportedMetricName e) {
+                LOGGER.warn("Metric name is unsupported, dropped: {}", entry.getKey());
+            }
+            catch (IllegalArgumentException e) {
+                LOGGER.error("Unable to push metric, dropped: {}", entry.getKey(), e);
+            }
         }
 
         for (Map.Entry<String, Timer> entry : timers.entrySet()) {
-            pushTimer(entry.getKey(), entry.getValue());
+            try {
+                pushTimer(entry.getKey(), entry.getValue());
+            }
+            catch (UnsupportedMetricName e) {
+                LOGGER.warn("Metric name is unsupported, dropped: {}", entry.getKey());
+            }
+            catch (IllegalArgumentException e) {
+                LOGGER.error("Unable to push metric, dropped: {}", entry.getKey(), e);
+            }
         }
     }
 

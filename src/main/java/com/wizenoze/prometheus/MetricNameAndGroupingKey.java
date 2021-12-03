@@ -17,6 +17,10 @@ class MetricNameAndGroupingKey {
     // storm.worker.(topologyId).(hostName).(componentId).(streamId).(taskId).(workerPort)-(name)
     // storm.worker.(topologyId).(hostName).(componentId).(taskId).(workerPort)-(name)
     // storm.topology.(topologyId).(hostName).(componentId).(taskId).(workerPort)-(name)
+    // storm.topology.production-topology-1-1636728165.ip-10-113-22-201_us-east-2_compute_internal.__system.-1.6700-CGroupCpu.sys-ms
+    // storm.worker.production-topology-1-1636728165.ip-10-113-22-201_us-east-2_compute_internal.wordGenerator.15.6701-__skipped-backpressure-ms.m1_rate
+    // storm.topology.production-topology-1-1636728165.ip-10-113-22-201_us-east-2_compute_internal.__system.-1.6701-memory.pools.CodeHeap-'profiled-nmethods'.usage
+    // storm.worker.production-topology-1-1636728165.ip-10-113-22-201_us-east-2_compute_internal.intermediateRanker.default.8.6700-__ack-count-counter:default
     private static final Pattern STORM_WORKER_METRIC_NAME_PATTERN =
             Pattern.compile("storm\\."
                     + "(?<type>worker|topology)\\."
@@ -26,7 +30,7 @@ class MetricNameAndGroupingKey {
                     + "(?:(?<streamId>[\\p{Alnum}[-_]]+)\\.)?"
                     + "(?<taskId>-?[\\d]+)\\."
                     + "(?<workerPort>[\\d]+)-"
-                    + "(?<name>([\\p{Alnum}[-_]]+|disruptor-[\\p{Alnum}[-_]]+\\[(?<threadId>-?[\\d]+\\p{Space}-?[\\d]+)\\]-[\\p{Alnum}[-_]]+))");
+                    + "(?<name>(disruptor-[\\p{Alnum}[-_]]+\\[(?<threadId>-?[\\d]+\\p{Space}-?[\\d]+)\\]-[\\p{Alnum}[-_]]+)|.+)");
 
     private final String name;
     private final Map<String, String> groupingKey;
@@ -39,7 +43,7 @@ class MetricNameAndGroupingKey {
     static MetricNameAndGroupingKey parseMetric(String originalName) {
         Matcher matcher = STORM_WORKER_METRIC_NAME_PATTERN.matcher(originalName);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException(
+            throw new UnsupportedMetricName(
                     originalName + " didn't match with the supported patterns.");
         }
 
