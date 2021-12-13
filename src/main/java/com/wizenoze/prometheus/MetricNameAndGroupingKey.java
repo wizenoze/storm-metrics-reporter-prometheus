@@ -26,20 +26,22 @@ class MetricNameAndGroupingKey {
                     + "(?:(?<streamId>[\\p{Alnum}[-_]]+)\\.)?"
                     + "(?<taskId>-?[\\d]+)\\."
                     + "(?<workerPort>[\\d]+)-"
-                    + "(?<name>([\\p{Alnum}[-_]]+|disruptor-[\\p{Alnum}[-_]]+\\[(?<threadId>-?[\\d]+\\p{Space}-?[\\d]+)\\]-[\\p{Alnum}[-_]]+))");
+                    + "(?<name>(disruptor-[\\p{Alnum}[-_]]+\\[(?<threadId>-?[\\d]+\\p{Space}-?[\\d]+)\\]-[\\p{Alnum}[-_]]+)|.+)");
 
     private final String name;
+    private final String help;
     private final Map<String, String> groupingKey;
 
-    private MetricNameAndGroupingKey(String name, Map<String, String> groupingKey) {
+    private MetricNameAndGroupingKey(String name, String help, Map<String, String> groupingKey) {
         this.name = name;
+        this.help = help;
         this.groupingKey = groupingKey;
     }
 
     static MetricNameAndGroupingKey parseMetric(String originalName) {
         Matcher matcher = STORM_WORKER_METRIC_NAME_PATTERN.matcher(originalName);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException(
+            throw new UnsupportedMetricName(
                     originalName + " didn't match with the supported patterns.");
         }
 
@@ -68,7 +70,7 @@ class MetricNameAndGroupingKey {
 
         String metricName = "storm_" + matcher.group("type") + "_" + escapeName(name);
 
-        return new MetricNameAndGroupingKey(metricName, groupingKey);
+        return new MetricNameAndGroupingKey(metricName, name, groupingKey);
     }
 
     private static String escapeName(String name) {
@@ -103,6 +105,10 @@ class MetricNameAndGroupingKey {
 
     String getName() {
         return name;
+    }
+
+    String getHelp() {
+        return help;
     }
 
     Map<String, String> getGroupingKey() {
